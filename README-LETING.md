@@ -81,8 +81,14 @@ esptool.py --chip esp32c3 -p <PORT> write_flash \
   --flash_mode dio --flash_freq 80m --flash_size 8MB \
   0x0    build/bootloader/bootloader.bin \
   0x8000 build/partition_table/partition-table.bin \
-  0x10000 build/xiaozhi.bin
+  0x10000 build/xiaozhi.bin \
+  0x400000 build/generated_assets.bin
 ```
+
+**第 4 段（assets）不能省。** 唤醒词模型 `srmodels.bin`、表情贴图、提示音都在这个分区里，
+只刷前 3 段的话设备能开机、能联网，但叫不醒。首次烧录之后重新生成 assets 时
+用 `scripts/build_default_assets.py`，它会把 `srmodels.bin` 一起打进去。
+
 
 ## 几个踩过的坑（留给后来人）
 
