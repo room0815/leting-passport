@@ -1,0 +1,21 @@
+﻿# ESP-IDF Partition Table — 乐听护照 ESP32-C3 8MB
+#
+# 【红线】原机 NVS 是 0x9000 起 0x6000 字节（24KB），Wi-Fi 凭据在里面。
+# 小智官方 partitions/v2/8m.csv 的 nvs 只有 0x4000，且 otadata 占据
+# 0xD000-0xF000，直接刷会截断 NVS 并覆盖后半段，网络配置必丢。
+#
+# 因此这里保持原机前三段布局不动：
+#   nvs      0x9000  0x6000   (0x9000-0xF000，刷机跳过)
+#   phy_init 0xF000  0x1000
+#   factory  0x10000 ...      (三段刷机的 app 地址不变)
+# 只在 app 后面追加官方需要的 assets 分区，并去掉 otadata / 双 OTA。
+# 配套 sdkconfig：CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=n
+#                CONFIG_PARTITION_TABLE_CUSTOM=y（原厂默认已开）
+#
+# 8MB 总空间 0x800000：
+#   0x010000 + 0x3F0000 = 0x400000 (app 4MB)
+#   0x400000 + 0x400000 = 0x800000 (assets 4MB)
+nvs,      data, nvs,     0x9000,  0x6000,
+phy_init, data, phy,     0xF000,  0x1000,
+factory,  app,  factory, 0x10000, 0x3F0000,
+assets,   data, spiffs,  0x400000, 0x400000,
