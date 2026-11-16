@@ -110,8 +110,17 @@ void LetingUI::Initialize() {
     RegisterTools();
     timer_ = lv_timer_create(TimerCb, kTickMs, this);
     leting_diag_start();
-    leting_measure_aac();
-    leting_measure_mp3();
+    // 乐听护照 1.4.15：这里原来无条件调用 leting_measure_aac() 和
+    // leting_measure_mp3()。那是早期为了「量一下 AAC 解码器到底吃多少堆」写的一次性
+    // 探测代码，量完忘了删。它在 UI 已经建好之后才跑，先 malloc 一块 51,532 字节
+    // （AAC 解码器），再解 30 帧 MP3，然后把两块都 free 掉。
+    // 后果不是「用完就还」，而是**堆被彻底打碎**：开机日志实测这条路走完之后
+    // 最大连续块从 47104 永久掉到 8704，之后 LVGL 每次合成图层、LCD 每次 SPI DMA
+    // 都只能挤在 8KB 的碎片里，画面就开始一顿一顿；赶上音频再要临时缓冲，
+    // 最低只剩 5548 字节，直接卡死。
+    // 现在整段删掉：不测量、不分配、不碎片。函数体留在 leting_plan.cc 里，
+    // 需要时可以在串口诊断里手动调用。
+    ESP_LOGI(TAG, "乐听固件版本 %s", LETING_FW_VERSION);
     ESP_LOGI(TAG, "乐听界面层就绪：横屏=%d 表情=%d 颜色=%06X", landscape_ ? 1 : 0,
              static_cast<int>(face_), static_cast<unsigned>(eye_rgb_));
 }
