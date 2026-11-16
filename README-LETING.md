@@ -71,6 +71,23 @@ idf.py -p <PORT> build
 `espressif/esp_codec_dev` 等依赖。分区表在 `partitions/v2/8m_leting_c3.csv`，
 需在 menuconfig 里选对应的 `PARTITION_TABLE_CUSTOM_FILENAME`。
 
+### ⚠️ 编译前必须打组件补丁
+
+`managed_components/` 是自动下载的第三方代码，不在版本控制里，但乐听在几个组件里
+做了**必需的真机修复**（TLS 握手超时、WebSocket 组帧内存、WiFi 省电与扫描策略、
+LVGL 断言死循环）。不打这些补丁编译出来的固件会「开机卡、一说话就重启」。
+
+组件目录要等第一次构建后才会生成，所以顺序是：
+
+```bash
+idf.py set-target esp32c3
+idf.py reconfigure                 # 先把 managed_components 拉下来
+cp -r patches/managed_components/* managed_components/    # Windows 用 Copy-Item -Recurse -Force
+idf.py -p <PORT> build
+```
+
+补丁清单和每处修的原因见 [patches/README.md](patches/README.md)。
+
 ### 刷机
 
 整包从 `0x0` 连续写入会覆盖 `0x9000–0xF000` 的 NVS（Wi-Fi 凭据与设备凭据），
